@@ -7,9 +7,37 @@ class Program
 {
     static void Main()
     {
-        IWebDriver driver = new ChromeDriver();
-        GmailSignupAutomation automation = new GmailSignupAutomation();
-        automation.StartGmailSignup(driver);
+        Random rnd = new Random();
+
+        var options = new ChromeOptions();
+
+        // 1. Proxy ayarı
+        //var proxy = new Proxy
+        //{
+        //    Kind = ProxyKind.Manual,
+        //    IsAutoDetect = false,
+        //    HttpProxy = "87.248.129.32:80",
+        //    SslProxy = "87.248.129.32:80"
+        //};
+        //options.Proxy = proxy;
+
+        // 2. Rastgele user-agent
+        string[] userAgents = new[]
+        {
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+        };
+        options.AddArgument($"--user-agent={userAgents[rnd.Next(userAgents.Length)]}");
+        options.AddArgument("--incognito");
+        options.AddArgument("--ignore-certificate-errors");
+
+        using (IWebDriver driver = new ChromeDriver(options))
+        {
+            GmailSignupAutomation automation = new GmailSignupAutomation();
+            automation.StartGmailSignup(driver);
+        }
+
     }
     public class GmailSignupAutomation
     {
@@ -28,47 +56,53 @@ class Program
                 // Ad
                 var (firstName, lastName) = GenerateRandomName();
 
-                driver.FindElement(By.Id("firstName")).SendKeys(firstName);
-                Thread.Sleep(3000);
-                // Soyad
-                driver.FindElement(By.Id("lastName")).SendKeys(lastName);
-                Thread.Sleep(4000);
-                // Next
+                var firstNameInput = driver.FindElement(By.Id("firstName"));
+                SlowType(firstNameInput, firstName);
+                Thread.Sleep(random.Next(800, 2000)); // Bekleme
+
+
+                var lastNameInput = driver.FindElement(By.Id("lastName"));
+                SlowType(lastNameInput, lastName);
+                Thread.Sleep(random.Next(1000, 2000)); // Bekleme
+
+
                 driver.FindElement(By.XPath("//span[contains(text(),'Next')]")).Click();
                 Thread.Sleep(4000);
 
                 // Doğum Ayı
 
-                string[] months = {
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
-        };
+                string[] months = { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" };
                 string randomMonth = months[random.Next(months.Length)];
                 var monthElement = driver.FindElement(By.Id("month"));
-                Thread.Sleep(3000);
+                Thread.Sleep(random.Next(700, 1000)); // Bekleme
                 new SelectElement(monthElement).SelectByText(randomMonth);
 
                 // Gün
                 string day = random.Next(1, 28).ToString();
-                Thread.Sleep(2000);
-                driver.FindElement(By.Id("day")).SendKeys(day);
+                Thread.Sleep(random.Next(500, 900)); // Bekleme
+
+                var dayInput = driver.FindElement(By.Id("day"));
+                SlowType(dayInput, day);
+
 
                 // Yıl
 
                 string year = random.Next(1970, 2000).ToString();
-                Thread.Sleep(5000);
-                driver.FindElement(By.Id("year")).SendKeys(year);
+                Thread.Sleep(random.Next(800, 1400)); // Bekleme
+                var yearInput = driver.FindElement(By.Id("year"));
+                SlowType(yearInput, year);
 
                 // Cinsiyet
                 string[] genderOptions = { "Rather not say", "Male", "Female" };
 
                 var genderElement = driver.FindElement(By.Id("gender"));
                 string selectedGender = genderOptions[random.Next(genderOptions.Length)];
-                Thread.Sleep(6000);
-                new SelectElement(genderElement).SelectByText(selectedGender);
+                var select = new SelectElement(genderElement);
+                Thread.Sleep(random.Next(500, 1200));
+                select.SelectByText(selectedGender);
 
                 driver.FindElement(By.XPath("//span[contains(text(),'Next')]")).Click();
-                Thread.Sleep(4000);
+                Thread.Sleep(random.Next(100, 800));
 
                 if (IsErrorPresent(driver))
                 {
@@ -90,25 +124,28 @@ class Program
                 {
                     // Kullanıcı adı
                     IWebElement usernameField = driver.FindElement(By.CssSelector("input[name='Username']"));
-                    usernameField.SendKeys(GenerateUniqueUsername(firstName, lastName));
+                    var username = GenerateUniqueUsername(firstName, lastName);
+                    SlowType(usernameField, username);
 
                     driver.FindElement(By.XPath("//span[contains(text(),'Next')]")).Click();
-                    Thread.Sleep(5000);
+                    Thread.Sleep(random.Next(300, 900));
                 }
 
-                string password = ResetPassword();
+                string password = CreatePassword();
                 // Şifre
-                IWebElement passwordField = driver.FindElement(By.CssSelector("input[name='Passwd']"));
-                Thread.Sleep(5000);
-                passwordField.SendKeys(password);
+                var passwordField = driver.FindElement(By.CssSelector("input[name='Passwd']"));
+                Thread.Sleep(random.Next(300, 900));
+                //passwordField.SendKeys(password);
+                SlowType(passwordField, password);
 
 
                 IWebElement passwordAgainField = driver.FindElement(By.CssSelector("input[name='PasswdAgain']"));
-                Thread.Sleep(5000);
-                passwordAgainField.SendKeys(password);
+                Thread.Sleep(random.Next(200, 700));
+                //passwordAgainField.SendKeys(password);
+                SlowType(passwordAgainField, password);
 
                 driver.FindElement(By.XPath("//span[contains(text(),'Next')]")).Click();
-                Thread.Sleep(8000);
+                Thread.Sleep(random.Next(300, 900));
 
                 // Hata kontrolü
                 if (IsErrorPresent(driver))
@@ -121,11 +158,11 @@ class Program
                 }
 
                 // Telefon Numarası
-                driver.FindElement(By.Id("phoneNumberId")).SendKeys("phoneNumber");
-                driver.FindElement(By.XPath("//span[contains(text(),'Next')]")).Click();
-                Thread.Sleep(2000);
+                //driver.FindElement(By.Id("phoneNumberId")).SendKeys("phoneNumber");
+                //driver.FindElement(By.XPath("//span[contains(text(),'Next')]")).Click();
+                //Thread.Sleep(2000);
 
-                Console.WriteLine("SMS doğrulama ve CAPTCHA ekranındasın.");
+                //Console.WriteLine("SMS doğrulama ve CAPTCHA ekranındasın.");
                 Console.ReadLine(); // Manuel müdahale için beklet
             }
             catch (Exception ex)
@@ -138,27 +175,16 @@ class Program
             }
         }
 
-        private ChromeDriver ChangeIP()
+        public static void SlowType(IWebElement element, string text)
         {
-            //Create a chrome options object
-            var chromeOptions = new ChromeOptions();
-            //Create a new proxy object
-            var proxy = new Proxy();
-            //Set the http proxy value, host and port.
-            proxy.HttpProxy = "196.43.97.114:5678";
-            //Set the proxy to the Chrome options
-            chromeOptions.Proxy = proxy;
-            //Then create a new ChromeDriver passing in the options
-            //ChromeDriver path isn't required if its on your path
-            //If it now downloaded it and put the path here
-            //var Driver = new ChromeDriver(@"C:\Users\Mesut Kaya\Desktop\", chromeOptions);
-            var driver = new ChromeDriver(chromeOptions); // yol vermene gerek kalmaz
-
-            //Navigation to a url and a look at the traffic logged in fiddler
-            return driver;
+            Random rnd = new Random();
+            foreach (char c in text)
+            {
+                element.SendKeys(c.ToString());
+                Thread.Sleep(rnd.Next(100, 200));
+            }
         }
-
-        static string GenerateUniqueUsername(string firstName, string lastName)
+        public static string GenerateUniqueUsername(string firstName, string lastName)
         {
             Random random = new Random();
 
@@ -177,7 +203,7 @@ class Program
 
             return username;
         }
-        public static string ResetPassword()
+        public static string CreatePassword()
         {
             Random random = new Random();
 
@@ -203,7 +229,6 @@ class Program
                 return false;
             }
         }
-
         private void RestartSignupFlow(IWebDriver driver)
         {
             driver.Manage().Cookies.DeleteAllCookies();
@@ -211,8 +236,7 @@ class Program
             Thread.Sleep(2000);
             StartGmailSignup(driver); // Recursive restart
         }
-
-        static (string firstName, string lastName) GenerateRandomName()
+        public static (string firstName, string lastName) GenerateRandomName()
         {
             // Predefined lists of first names and last names
             string[] firstNames = { "Liam", "Ava", "Ethan", "Sophie", "Maxwell", "Isla", "Oliver", "Maya", "Lucas", "Clara" };
@@ -229,5 +253,4 @@ class Program
             return (firstName, lastName);
         }
     }
-
 }
